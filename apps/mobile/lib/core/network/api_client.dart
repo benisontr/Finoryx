@@ -27,8 +27,8 @@ class ApiClient {
         _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl ?? defaultBaseUrl,
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 15),
+            connectTimeout: const Duration(seconds: 45),
+            receiveTimeout: const Duration(seconds: 45),
             headers: {'Content-Type': 'application/json'},
           ),
         ) {
@@ -48,7 +48,27 @@ class ApiClient {
 
           return handler.next(options);
         },
-        onError: (DioException error, handler) {
+        onError: (DioException error, handler) async {
+          // Smart retry for transient Render cold-start 502/503/504 or connection timeouts
+          final isRetryable = error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.receiveTimeout ||
+              (error.response?.statusCode != null &&
+                  [502, 503, 504].contains(error.response!.statusCode));
+
+          final retryCount = (error.requestOptions.extra['retry_count'] as int?) ?? 0;
+
+          if (isRetryable && retryCount < 2) {
+            error.requestOptions.extra['retry_count'] = retryCount + 1;
+            await Future.delayed(const Duration(milliseconds: 1500));
+            try {
+              final response = await _dio.fetch(error.requestOptions);
+              return handler.resolve(response);
+            } catch (e) {
+              if (e is DioException) {
+                return handler.next(e);
+              }
+            }
+          }
           return handler.next(error);
         },
       ),

@@ -14,6 +14,7 @@ async function bootstrap() {
   app.setGlobalPrefix(apiPrefix, {
     exclude: ['/', 'health', `${apiPrefix}/health`, 'api/v1/health'],
   });
+  app.enableShutdownHooks();
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

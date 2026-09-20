@@ -9,14 +9,22 @@ import {
 import { SupabaseService } from '../../database/supabase.service';
 import { CreateCategoryDto, UpdateCategoryDto, CategoryType } from './dto/create-category.dto';
 import { CategoryEntity } from './entities/category.entity';
+import { MemoryCache } from '../../common/utils/cache.util';
 
 @Injectable()
 export class CategoriesService {
   private readonly logger = new Logger(CategoriesService.name);
+  private readonly categoryCache = new MemoryCache<CategoryEntity[]>(120); // 2 minute cache
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async getCategories(userId: string, type?: CategoryType): Promise<CategoryEntity[]> {
+    const cacheKey = `${userId}-${type || 'all'}`;
+    const cached = this.categoryCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const supabase = this.supabaseService.getAdminClient();
 
     let query = supabase
@@ -37,7 +45,9 @@ export class CategoriesService {
       throw new InternalServerErrorException(error.message);
     }
 
-    return (data || []).map(CategoryEntity.fromRow);
+    const categories = (data || []).map(CategoryEntity.fromRow);
+    this.categoryCache.set(cacheKey, categories);
+    return categories;
   }
 
   async getCategoryById(userId: string, categoryId: string): Promise<CategoryEntity> {
@@ -79,6 +89,7 @@ export class CategoriesService {
       throw new BadRequestException(error.message);
     }
 
+    this.categoryCache.clear();
     return CategoryEntity.fromRow(data);
   }
 
@@ -118,6 +129,7 @@ export class CategoriesService {
       throw new InternalServerErrorException(error.message);
     }
 
+    this.categoryCache.clear();
     return CategoryEntity.fromRow(data);
   }
 
@@ -145,6 +157,7 @@ export class CategoriesService {
       throw new InternalServerErrorException(error.message);
     }
 
+    this.categoryCache.clear();
     return {
       success: true,
       message: 'Category successfully deleted',
