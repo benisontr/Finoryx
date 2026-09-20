@@ -1,7 +1,7 @@
 # ==========================================
 # STAGE 1: Build & Compile TypeScript
 # ==========================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN npm prune --production
 # ==========================================
 # STAGE 2: Lightweight Production Runtime
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 

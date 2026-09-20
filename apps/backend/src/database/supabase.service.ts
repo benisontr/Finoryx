@@ -91,6 +91,10 @@ export class SupabaseService {
     const serviceRoleKey = this.configService.get<string>('supabase.serviceRoleKey');
 
     this.supabaseClient = createClient(supabaseUrl, anonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
       global: {
         fetch: customFetch as any,
       },
