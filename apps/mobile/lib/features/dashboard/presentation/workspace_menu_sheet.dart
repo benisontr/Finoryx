@@ -168,7 +168,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'Accounts',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/accounts');
+                        context.push('/accounts');
                       },
                     ),
                   ),
@@ -182,7 +182,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'Categories',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/categories');
+                        context.push('/categories');
                       },
                     ),
                   ),
@@ -200,7 +200,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'Budgets',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/budgets');
+                        context.push('/budgets');
                       },
                     ),
                   ),
@@ -214,7 +214,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'AI Assistant',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/assistant');
+                        context.push('/assistant');
                       },
                     ),
                   ),
@@ -232,7 +232,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'Reports',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/reports');
+                        context.push('/reports');
                       },
                     ),
                   ),
@@ -246,7 +246,7 @@ class WorkspaceMenuSheet extends ConsumerWidget {
                       label: 'Goals',
                       onTap: () {
                         Navigator.pop(context);
-                        context.go('/goals');
+                        context.push('/goals');
                       },
                     ),
                   ),

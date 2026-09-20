@@ -30,21 +30,44 @@ export class AnalyticsService {
     const year = targetYear || now.getFullYear();
 
     try {
-      // 1. Fetch Accounts for Net Worth calculation
-      const { data: accounts, error: accError } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', userId);
+      // Date bounds
+      const startDateStr = new Date(Date.UTC(year, month - 1, 1)).toISOString().split('T')[0];
+      const endDateStr = new Date(Date.UTC(year, month, 0)).toISOString().split('T')[0];
+      const sixMonthsAgoStartDate = new Date(Date.UTC(year, month - 6, 1));
+      const sixMonthsAgoStartStr = sixMonthsAgoStartDate.toISOString().split('T')[0];
 
-      if (accError) {
-        throw new BadRequestException(`Failed to fetch accounts: ${accError.message}`);
+      // Execute all database queries concurrently in a single round-trip batch
+      const [accountsRes, transactionsRes, budgets, goalsRes] = await Promise.all([
+        supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', userId),
+        supabase
+          .from('transactions')
+          .select('*, categories:category_id ( id, name, icon, color_hex )')
+          .eq('user_id', userId)
+          .gte('transaction_date', sixMonthsAgoStartStr)
+          .lte('transaction_date', endDateStr),
+        this.budgetsService.getBudgets(userId, month, year),
+        this.goalsService.findAll(userId),
+      ]);
+
+      if (accountsRes.error) {
+        throw new BadRequestException(`Failed to fetch accounts: ${accountsRes.error.message}`);
+      }
+      if (transactionsRes.error) {
+        throw new BadRequestException(`Failed to fetch transactions: ${transactionsRes.error.message}`);
       }
 
+      const accounts = accountsRes.data || [];
+      const allTransactions = transactionsRes.data || [];
+
+      // 1. Calculate Net Worth
       const liabilityTypes = ['CREDIT_CARD', 'LOAN', 'MORTGAGE', 'OTHER_LIABILITY'];
       let totalAssets = 0;
       let totalLiabilities = 0;
 
-      for (const acc of accounts || []) {
+      for (const acc of accounts) {
         const balance = parseFloat(acc.current_balance) || 0.0;
         const type = (acc.account_type || acc.type || '').toUpperCase();
         if (liabilityTypes.includes(type)) {
@@ -56,21 +79,7 @@ export class AnalyticsService {
 
       const netWorth = totalAssets - totalLiabilities;
 
-      // 2. Fetch Transactions for the Target Month
-      const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-      const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)).toISOString();
-
-      const { data: monthTransactions, error: txError } = await supabase
-        .from('transactions')
-        .select('*, categories:category_id ( id, name, icon, color_hex )')
-        .eq('user_id', userId)
-        .gte('transaction_date', startDate.split('T')[0])
-        .lte('transaction_date', endDate.split('T')[0]);
-
-      if (txError) {
-        throw new BadRequestException(`Failed to fetch transactions: ${txError.message}`);
-      }
-
+      // 2. Filter target month transactions and compute cash flow & category breakdown
       let totalIncome = 0;
       let totalExpense = 0;
       const categorySpendMap = new Map<
@@ -78,7 +87,11 @@ export class AnalyticsService {
         { name: string; icon: string; colorHex: string; amount: number }
       >();
 
-      for (const tx of monthTransactions || []) {
+      const monthTransactions = allTransactions.filter(
+        (tx) => tx.transaction_date >= startDateStr && tx.transaction_date <= endDateStr,
+      );
+
+      for (const tx of monthTransactions) {
         const amount = parseFloat(tx.amount) || 0.0;
         const type = (tx.type || '').toUpperCase();
 
@@ -122,7 +135,6 @@ export class AnalyticsService {
         .sort((a, b) => b.amount - a.amount);
 
       // 3. Budgets Aggregation
-      const budgets = await this.budgetsService.getBudgets(userId, month, year);
       let totalBudgetLimit = 0;
       let totalBudgetSpent = 0;
       let warningCount = 0;
@@ -144,11 +156,10 @@ export class AnalyticsService {
       );
 
       // 4. Goals Aggregation
-      const goalsRes = await this.goalsService.findAll(userId);
       const activeGoals = goalsRes.goals.filter((g) => !g.isCompleted);
       const nearestGoal = activeGoals.length > 0 ? activeGoals[0] : undefined;
 
-      // 5. Cash Flow Trends (Past 6 Months)
+      // 5. Cash Flow Trends (Past 6 Months) aggregated in-memory
       const cashFlowTrends: CashFlowTrendPoint[] = [];
       const monthNames = [
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -162,21 +173,16 @@ export class AnalyticsService {
         const tStart = new Date(Date.UTC(tYear, tMonth - 1, 1)).toISOString().split('T')[0];
         const tEnd = new Date(Date.UTC(tYear, tMonth, 0)).toISOString().split('T')[0];
 
-        const { data: trendTxs } = await supabase
-          .from('transactions')
-          .select('amount, type')
-          .eq('user_id', userId)
-          .gte('transaction_date', tStart)
-          .lte('transaction_date', tEnd);
-
         let tIncome = 0;
         let tExpense = 0;
 
-        for (const tx of trendTxs || []) {
-          const amt = parseFloat(tx.amount) || 0.0;
-          const type = (tx.type || '').toUpperCase();
-          if (type === 'INCOME') tIncome += amt;
-          if (type === 'EXPENSE') tExpense += amt;
+        for (const tx of allTransactions) {
+          if (tx.transaction_date >= tStart && tx.transaction_date <= tEnd) {
+            const amt = parseFloat(tx.amount) || 0.0;
+            const type = (tx.type || '').toUpperCase();
+            if (type === 'INCOME') tIncome += amt;
+            if (type === 'EXPENSE') tExpense += amt;
+          }
         }
 
         cashFlowTrends.push({
@@ -194,7 +200,7 @@ export class AnalyticsService {
           netWorth: Math.round(netWorth * 100) / 100,
           totalAssets: Math.round(totalAssets * 100) / 100,
           totalLiabilities: Math.round(totalLiabilities * 100) / 100,
-          accountsCount: (accounts || []).length,
+          accountsCount: accounts.length,
         },
         cashFlow: {
           month,

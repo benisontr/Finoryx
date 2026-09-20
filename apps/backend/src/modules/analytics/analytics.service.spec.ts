@@ -88,12 +88,13 @@ describe('AnalyticsService', () => {
     ];
 
     const mockMonthTxs = [
-      { id: 't-1', amount: '4000.00', type: 'INCOME', category_id: null },
+      { id: 't-1', amount: '4000.00', type: 'INCOME', category_id: null, transaction_date: '2026-06-05' },
       {
         id: 't-2',
         amount: '600.00',
         type: 'EXPENSE',
         category_id: 'cat-food',
+        transaction_date: '2026-06-10',
         categories: { id: 'cat-food', name: 'Food & Dining', icon: 'restaurant', color_hex: '#EF4444' },
       },
       {
@@ -101,6 +102,7 @@ describe('AnalyticsService', () => {
         amount: '400.00',
         type: 'EXPENSE',
         category_id: 'cat-util',
+        transaction_date: '2026-06-15',
         categories: { id: 'cat-util', name: 'Utilities', icon: 'bolt', color_hex: '#3B82F6' },
       },
     ];
@@ -109,8 +111,7 @@ describe('AnalyticsService', () => {
       .mockResolvedValueOnce({ data: mockAccounts, error: null }) // accounts
       .mockReturnValue(mockSupabase); // chained for transactions
     mockSupabase.lte
-      .mockResolvedValueOnce({ data: mockMonthTxs, error: null }) // target month transactions
-      .mockResolvedValue({ data: [], error: null }); // trend transactions
+      .mockResolvedValueOnce({ data: mockMonthTxs, error: null }); // 6-month transactions
 
     const result = await service.getDashboardSummary('user-1', 6, 2026);
 

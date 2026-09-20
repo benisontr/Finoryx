@@ -3,6 +3,12 @@ import '../../../core/security/secure_storage_service.dart';
 import '../../../core/security/biometric_service.dart';
 import '../data/auth_repository.dart';
 import '../domain/user_entity.dart';
+import '../../dashboard/presentation/dashboard_controller.dart';
+import '../../accounts/presentation/accounts_controller.dart';
+import '../../transactions/presentation/transactions_controller.dart';
+import '../../budgets/presentation/budgets_controller.dart';
+import '../../goals/presentation/goals_controller.dart';
+import '../../categories/presentation/categories_controller.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -46,16 +52,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SecureStorageService _storage;
   final BiometricService _biometrics;
+  final Ref _ref;
 
   AuthNotifier({
     required AuthRepository repository,
     required SecureStorageService storage,
     required BiometricService biometrics,
+    required Ref ref,
   })  : _repository = repository,
         _storage = storage,
         _biometrics = biometrics,
+        _ref = ref,
         super(const AuthState(status: AuthStatus.initial)) {
     checkInitialAuth();
+  }
+
+  void _onAuthenticated() {
+    try {
+      _ref.read(dashboardControllerProvider.notifier).loadDashboard();
+    } catch (_) {}
+    try {
+      _ref.read(accountsNotifierProvider.notifier).loadAccounts();
+    } catch (_) {}
+    try {
+      _ref.read(transactionsNotifierProvider.notifier).loadTransactions();
+    } catch (_) {}
+    try {
+      _ref.read(budgetsNotifierProvider.notifier).loadBudgets();
+    } catch (_) {}
+    try {
+      _ref.read(goalsNotifierProvider.notifier).loadGoals();
+    } catch (_) {}
+    try {
+      _ref.read(categoriesNotifierProvider.notifier).loadCategories();
+    } catch (_) {}
   }
 
   Future<void> checkInitialAuth() async {
@@ -72,33 +102,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(status: AuthStatus.biometricRequired);
         final authenticated = await _biometrics.authenticate();
         if (authenticated) {
-          await _loadUserProfile();
+          state = state.copyWith(status: AuthStatus.authenticated);
+          _loadUserProfile();
+          _onAuthenticated();
+          return;
         }
         return;
       }
     }
 
     await _loadUserProfile();
-  }
-
-  Future<void> unlockWithBiometrics() async {
-    final authenticated = await _biometrics.authenticate();
-    if (authenticated) {
-      await _loadUserProfile();
+    if (state.status == AuthStatus.authenticated) {
+      _onAuthenticated();
     }
   }
 
+  Future<bool> unlockWithBiometrics() async {
+    final authenticated = await _biometrics.authenticate();
+    if (authenticated) {
+      state = state.copyWith(status: AuthStatus.authenticated);
+      _loadUserProfile();
+      _onAuthenticated();
+      return true;
+    }
+    return false;
+  }
+
   Future<void> _loadUserProfile() async {
-    state = state.copyWith(status: AuthStatus.loading);
     try {
       final user = await _repository.getProfile();
       if (user != null) {
         state = state.copyWith(status: AuthStatus.authenticated, user: user);
-      } else {
+      } else if (state.user == null) {
         state = state.copyWith(status: AuthStatus.unauthenticated);
       }
     } catch (e) {
-      state = state.copyWith(status: AuthStatus.unauthenticated);
+      if (state.user == null) {
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+      }
     }
   }
 
@@ -107,6 +148,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final user = await _repository.signIn(email: email, password: password);
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      _onAuthenticated();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -127,6 +169,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         baseCurrency: baseCurrency,
       );
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      _onAuthenticated();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -159,5 +202,6 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref
     repository: ref.watch(authRepositoryProvider),
     storage: ref.watch(secureStorageProvider),
     biometrics: ref.watch(biometricServiceProvider),
+    ref: ref,
   );
 });

@@ -333,7 +333,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return FinoryxAiInsightCard(
       message: insightText,
-      onAction: () => context.go('/assistant'),
+      onAction: () => context.push('/assistant'),
     );
   }
 
@@ -461,7 +461,7 @@ class DashboardScreen extends ConsumerWidget {
           FinoryxSectionHeader(
             title: 'Top Spending Breakdown',
             actionLabel: 'Reports →',
-            onAction: () => context.go('/reports'),
+            onAction: () => context.push('/reports'),
           ),
           ...categories.take(3).map((cat) {
             Color catColor = Color(int.tryParse(cat.categoryColorHex.replaceFirst('#', '0xFF')) ?? 0xFF5B5CE2);
@@ -535,7 +535,7 @@ class DashboardScreen extends ConsumerWidget {
         Expanded(
           child: FinoryxCard(
             padding: const EdgeInsets.all(AppSpacing.sm),
-            onTap: () => context.go('/budgets'),
+            onTap: () => context.push('/budgets'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -570,7 +570,7 @@ class DashboardScreen extends ConsumerWidget {
         Expanded(
           child: FinoryxCard(
             padding: const EdgeInsets.all(AppSpacing.sm),
-            onTap: () => context.go('/goals'),
+            onTap: () => context.push('/goals'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -616,7 +616,7 @@ class DashboardScreen extends ConsumerWidget {
         FinoryxSectionHeader(
           title: 'Recent Transactions',
           actionLabel: 'View All',
-          onAction: () => context.go('/transactions'),
+          onAction: () => context.push('/transactions'),
         ),
         if (transactions.isEmpty)
           FinoryxCard(
