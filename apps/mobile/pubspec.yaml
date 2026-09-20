@@ -1,0 +1,42 @@
+name: finoryx_mobile
+description: AI Personal Finance Operating System - Mobile Application
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management & DI
+  flutter_riverpod: ^2.5.1
+
+  # Routing & Navigation
+  go_router: ^13.2.4
+
+  # Networking & Serialization
+  dio: ^5.4.3+1
+
+  # Supabase & Auth
+  supabase_flutter: ^2.5.6
+
+  # Security & Biometrics
+  flutter_secure_storage: ^9.0.0
+  local_auth: ^2.2.0
+
+  # UI, Icons, Fonts & Charts
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+  intl: ^0.19.0
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

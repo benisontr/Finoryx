@@ -1,0 +1,92 @@
+name: Mobile Release APK Builder (Direct Download for Testers)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-release-apk.yml'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Backend Production API URL (e.g. https://finoryx-backend.onrender.com/api/v1)'
+        required: false
+        default: 'https://finoryx-backend.onrender.com/api/v1'
+      release_notes:
+        description: 'Release notes or test description'
+        required: false
+        default: 'Finoryx Mobile Android Testing Build'
+
+jobs:
+  build-android:
+    name: Build & Publish Android Release APK
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Mobile Dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build Android Release APK
+        working-directory: apps/mobile
+        env:
+          API_URL: ${{ inputs.api_url || vars.API_URL || 'https://finoryx-backend.onrender.com/api/v1' }}
+        run: |
+          echo "Building APK with API_URL=$API_URL"
+          flutter build apk --release --dart-define=API_URL="$API_URL"
+
+      - name: Prepare APK Artifact
+        run: |
+          mkdir -p release-output
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk release-output/finoryx-release.apk
+          echo "APK generated at release-output/finoryx-release.apk"
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: finoryx-android-release-apk
+          path: release-output/finoryx-release.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with Direct APK Download
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name || 'Finoryx Android Release' }}
+          tag_name: ${{ github.ref_name || 'v1.0.0-test' }}
+          body: |
+            ### 📱 FINORYX Android Installable Build
+            
+            Download the APK below and install it directly on your Android phone to test the Finoryx app!
+            
+            **Installation Instructions**:
+            1. Download `finoryx-release.apk` on your Android device.
+            2. Tap the downloaded file to install.
+            3. If prompted with *"Install unknown apps"*, tap **Settings** and enable **"Allow from this source"**.
+            4. Open Finoryx and start testing!
+          files: |
+            release-output/finoryx-release.apk
+          draft: false
+          prerelease: false
