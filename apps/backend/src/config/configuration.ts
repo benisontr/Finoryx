@@ -9,8 +9,8 @@ export default () => ({
     jwtSecret: process.env.SUPABASE_JWT_SECRET || 'mock-jwt-secret',
   },
   ai: {
-    apiKey: process.env.LLM_API_KEY || '',
-    model: process.env.LLM_MODEL || 'gemini-1.5-flash',
+    apiKey: process.env.GEMINI_API_KEY || process.env.LLM_API_KEY || '',
+    model: process.env.LLM_MODEL || process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   },
   throttler: {
     ttl: parseInt(process.env.THROTTLE_TTL, 10) || 60,
