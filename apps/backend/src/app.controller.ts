@@ -24,6 +24,16 @@ export class AppController {
   @Public()
   @Get('health')
   getHealth() {
+    return this.getHealthData();
+  }
+
+  @Public()
+  @Get('api/v1/health')
+  getApiHealth() {
+    return this.getHealthData();
+  }
+
+  private getHealthData() {
     const uptimeSeconds = Math.floor((Date.now() - this.startTime) / 1000);
     return {
       status: 'ok',
