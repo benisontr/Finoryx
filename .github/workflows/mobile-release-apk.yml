@@ -69,12 +69,11 @@ jobs:
           path: release-output/finoryx-release.apk
           retention-days: 30
 
-      - name: Create GitHub Release with Direct APK Download
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      - name: Create or Update GitHub Release with Direct APK Download
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name || 'Finoryx Android Release' }}
-          tag_name: ${{ github.ref_name || 'v1.0.0-test' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Finoryx Android Latest Build' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'latest' }}
           body: |
             ### 📱 FINORYX Android Installable Build
             
