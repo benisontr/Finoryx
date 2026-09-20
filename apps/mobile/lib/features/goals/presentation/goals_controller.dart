@@ -43,6 +43,8 @@ final goalsControllerProvider =
   return GoalsController(repository);
 });
 
+final goalsNotifierProvider = goalsControllerProvider;
+
 class GoalsController extends StateNotifier<GoalsState> {
   final GoalsRepository _repository;
 

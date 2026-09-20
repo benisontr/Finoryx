@@ -81,7 +81,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _ref.read(budgetsNotifierProvider.notifier).loadBudgets();
     } catch (_) {}
     try {
-      _ref.read(goalsNotifierProvider.notifier).loadGoals();
+      _ref.read(goalsControllerProvider.notifier).loadGoals();
     } catch (_) {}
     try {
       _ref.read(categoriesNotifierProvider.notifier).loadCategories();
