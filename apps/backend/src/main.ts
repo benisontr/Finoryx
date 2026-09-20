@@ -11,7 +11,9 @@ async function bootstrap() {
   const port = configService.get<number>('port', 3000);
   const apiPrefix = configService.get<string>('apiPrefix', 'api/v1');
 
-  app.setGlobalPrefix(apiPrefix);
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: ['/', 'health'],
+  });
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
