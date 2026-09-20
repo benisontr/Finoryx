@@ -54,7 +54,7 @@ jobs:
           API_URL: ${{ inputs.api_url || vars.API_URL || 'https://finoryx-backend.onrender.com/api/v1' }}
         run: |
           echo "Building APK with API_URL=$API_URL"
-          flutter build apk --release --dart-define=API_URL="$API_URL"
+          flutter build apk --release --dart-define=API_URL="$API_URL" --android-skip-build-dependency-validation
 
       - name: Prepare APK Artifact
         run: |
